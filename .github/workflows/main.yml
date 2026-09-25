@@ -1,0 +1,57 @@
+import 'dart:io';
+import 'package:excel/excel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'database_helper.dart';
+
+class ExcelService {
+  static Future<String> exportReportsToExcel() async {
+    final reports = await DatabaseHelper.instance.getAllReports();
+    var excel = Excel.createExcel();
+
+    Sheet sheetObject = excel['تقارير الصحة الواحدة'];
+    excel.delete('Sheet1');
+
+    // ترويسة الأعمدة
+    sheetObject.appendRow([
+      TextCellValue('الرقم'),
+      TextCellValue('القطاع'),
+      TextCellValue('المرض / المسبب'),
+      TextCellValue('عدد الحالات'),
+      TextCellValue('المحافظة'),
+      TextCellValue('المديرية'),
+      TextCellValue('مستوى الخطورة'),
+      TextCellValue('تاريخ الإبلاغ'),
+      TextCellValue('اسم الراصد'),
+      TextCellValue('ملاحظات'),
+    ]);
+
+    // تعبئة البيانات
+    for (var r in reports) {
+      sheetObject.appendRow([
+        IntCellValue(r['id']),
+        TextCellValue(r['sector']),
+        TextCellValue(r['disease_name']),
+        IntCellValue(r['cases_count']),
+        TextCellValue(r['governorate']),
+        TextCellValue(r['district']),
+        TextCellValue(r['risk_level']),
+        TextCellValue(r['reporting_date']),
+        TextCellValue(r['reporter_name']),
+        TextCellValue(r['notes'] ?? ''),
+      ]);
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/One_Health_Report_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final fileBytes = excel.save();
+
+    if (fileBytes != null) {
+      File(filePath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+      return filePath;
+    } else {
+      throw Exception('فشل في إنشاء ملف Excel');
+    }
+  }
+}
